@@ -16,10 +16,13 @@ options = get_parser().parse_args()
 t_l_path   = './fss_test_set.txt'
 Best_performance = 0
 Valid_miou = []
-
+encoder = 'RN' # 'VGG_b345' #
+weights = '/content/drive/MyDrive/' + encoder + 'fewshot_DOGLSTM.h5'
 # Build the model
-model = M.my_model(encoder = 'VGG_b345', input_size = (options.img_h, options.img_w, 3), k_shot = options.kshot, learning_rate = options.learning_rate)
+model = M.my_model(encoder = encoder, input_size = (options.img_h, options.img_w, 3), k_shot = options.kshot, learning_rate = options.learning_rate)
 model.summary()
+if os.path.isfile(weights):
+  model.load_weights(weights)
 
 # Load an episode of train
 Train_list, Test_list = U.Get_tr_te_lists(options, t_l_path)
@@ -57,10 +60,10 @@ def evaluate(opt, ep):
     Valid_miou.append((overall_miou / opt.it_eval))
     if Best_performance<(overall_miou / opt.it_eval):
        Best_performance = (overall_miou / opt.it_eval)
-       model.save_weights('fewshot_DOGLSTM.h5')
+       model.save_weights(weights)
 
 def test(opt):
-    model.load_weights('fewshot_DOGLSTM.h5')
+    model.load_weights(weights)
     overall_miou = 0.0
     for idx in range (opt.it_test):
         ## Get an episode for test 

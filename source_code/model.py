@@ -11,12 +11,29 @@ import cv2
 import numpy as np
 
 
-    
+def RN_GlobalAveragePooling2D_r(f):
+    def func(x):
+        #print("GAP")
+        #print(x.shape)
+        #print(f.shape)
+        x    =  layers.multiply([x, f])
+        repx =  int(x.shape[2])
+        repy =  int(x.shape[3])
+        x    = (keras.backend.sum(x, axis=[2, 3], keepdims=True) / (keras.backend.sum(f, axis=[2, 3], keepdims=True)))
+        x    =  keras.backend.repeat_elements(x, repx, axis = 2)
+        x    =  keras.backend.repeat_elements(x, repy, axis = 3)    
+        return x
+    return Lambda(func) 
+
 def GlobalAveragePooling2D_r(f):
     def func(x):
-    
         repc =  int(x.shape[4])
+        #print("f.shape")
+        #print(f.shape)
         m    =  keras.backend.repeat_elements(f, repc, axis = 4)
+        #print("GAP")
+        #print(x.shape)
+        #print(m.shape)
         x    =  layers.multiply([x, m])
         repx =  int(x.shape[2])
         repy =  int(x.shape[3])
@@ -44,6 +61,8 @@ def common_representation(x1, x2):
     repc =  int(x1.shape[1])
     x2   =  keras.layers.Reshape(target_shape=(1, np.int32(x2.shape[1]), np.int32(x2.shape[2]), np.int32(x2.shape[3]))) (x2) 
     x2   =  Rep_mask(repc)(x2)
+    print(x1.shape)
+    print(x2.shape)
     x    =  layers.concatenate([x1, x2], axis=4) 
     x    =  layers.TimeDistributed(layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal'))(x)
     x    =  layers.TimeDistributed(layers.BatchNormalization(axis=3))(x) 
@@ -52,29 +71,54 @@ def common_representation(x1, x2):
    
 def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_rate = 1e-4):
     # Get the encoder
-    if encoder == 'VGG_b3':
+    encoder_t = encoder
+    if encoder_t == 'VGG_b3':
        encoder = EM.vgg_encoder_b3(input_size = input_size)
-    elif encoder == 'VGG_b4':
+    elif encoder_t == 'VGG_b4':
        encoder = EM.vgg_encoder_b4(input_size = input_size)
-    elif encoder == 'VGG_b34':
+    elif encoder_t == 'VGG_b34':
        encoder = EM.vgg_encoder_b34(input_size = input_size)
-    elif encoder == 'VGG_b5':
+    elif encoder_t == 'VGG_b5':
        encoder = EM.vgg_encoder_b5(input_size = input_size)
-    elif encoder == 'VGG_b345':
+    elif encoder_t == 'VGG_b345':
        encoder = EM.vgg_encoder_b345(input_size = input_size)
-    elif encoder == 'VGG_b35':
+    elif encoder_t == 'VGG_b35':
        encoder = EM.vgg_encoder_b35(input_size = input_size)
-    elif encoder == 'VGG_b45':
+    elif encoder_t == 'VGG_b45':
        encoder = EM.vgg_encoder_b45(input_size = input_size)
+    elif encoder_t == 'RN':
+       encoder = EM.rn_encoder(input_size = input_size)
     else:
        print('Encoder is not defined yet')
- 
+
+
+
+    I_mask   = layers.Input((k_shot, int(input_size[0]/4), int(input_size[1]/4), 1))
+    O_mask = ''
+    print(I_mask.shape)
+    if encoder_t == 'RN':
+      #print(S_mask.shape)
+      #ksm_encoder = keras.models.Sequential()
+      #sm_enc = 
+      #sm_enc = layers.Conv2D(128, (7, 7), strides=(2, 2), name='conv_sm')
+      enc = layers.Conv2D(128, (8, 8), strides=(7, 7))
+      ksm_encoder_layer = layers.TimeDistributed(enc, input_shape=(k_shot, int(input_size[0]/4), int(input_size[1]/4), 1))
+      O_mask = ksm_encoder_layer(I_mask)
+      print("134")
+      print(O_mask.shape)
+    else:
+      O_mask = I_mask
+
+    model_S = Model(inputs=[I_mask], outputs=O_mask)
+    S_mask = O_mask
     S_input  = layers.Input((k_shot, input_size[0], input_size[1], input_size[2]))
+    #print(S_input.shape)
     Q_input  = layers.Input(input_size)
-    S_mask   = layers.Input((k_shot, int(input_size[0]/4), int(input_size[1]/4), 1))
-    
+
+    #print(S_mask.shape)
     ## K shot
-    
+
+
     kshot_encoder = keras.models.Sequential()
     kshot_encoder.add(layers.TimeDistributed(encoder, input_shape=(k_shot, input_size[0], input_size[1], input_size[2])))
 
@@ -105,18 +149,39 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     x2 = Sigma2_layer(s_encoded)
     x3 = Sigma3_layer(s_encoded)    
     x4 = Sigma4_layer(s_encoded)    
-    
-    ## DOG Pyramid
+
+      #S_mask = smx
+      #print(S_mask.shape)
+
+    #print("x1.shape")
+    #print(x1.shape)
+    #print(s_encoded.shape)
+
+
     DOG1 = layers.Subtract()([s_encoded, x1])
     DOG2 = layers.Subtract()([x1, x2])
     DOG3 = layers.Subtract()([x2, x3])            
-    DOG4 = layers.Subtract()([x3, x4])    
-
+    DOG4 = layers.Subtract()([x3, x4])   
+    #print("Dog.shape") 
+    #print(S_mask.shape)
+    #print(DOG1.shape)
+    
+    s_1 =''
+    s_2 =''
+    s_3 =''
+    s_4 =''
     ## Global Representation
-    s_1  = GlobalAveragePooling2D_r(S_mask)(DOG1)   
-    s_2  = GlobalAveragePooling2D_r(S_mask)(DOG2)
-    s_3  = GlobalAveragePooling2D_r(S_mask)(DOG3)
-    s_4  = GlobalAveragePooling2D_r(S_mask)(DOG4)
+    if encoder_t == 'RN':
+      s_1  = RN_GlobalAveragePooling2D_r(S_mask)(DOG1)   
+      s_2  = RN_GlobalAveragePooling2D_r(S_mask)(DOG2)
+      s_3  = RN_GlobalAveragePooling2D_r(S_mask)(DOG3)
+      s_4  = RN_GlobalAveragePooling2D_r(S_mask)(DOG4)
+    else:
+
+      s_1  = GlobalAveragePooling2D_r(S_mask)(DOG1)   
+      s_2  = GlobalAveragePooling2D_r(S_mask)(DOG2)
+      s_3  = GlobalAveragePooling2D_r(S_mask)(DOG3)
+      s_4  = GlobalAveragePooling2D_r(S_mask)(DOG4)
 
     ## Common Representation of Support and Query sample
     s_1  = common_representation(s_1, q_encoded)
@@ -138,19 +203,20 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(Bi_rep)
     x = layers.BatchNormalization(axis=3)(x) 
     x = layers.Activation('relu')(x)       
-    x = layers.UpSampling2D(size=(2, 2))(x)
+    x = layers.UpSampling2D(size=(2*2, 2*2))(x)
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.BatchNormalization(axis=3)(x) 
     x = layers.Activation('relu')(x)    
-    x = layers.UpSampling2D(size=(2, 2))(x)
+    x = layers.UpSampling2D(size=(2*4, 2*4))(x)
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.BatchNormalization(axis=3)(x) 
     x = layers.Activation('relu')(x)       
     x = layers.Conv2D(64, 3,  activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.Conv2D(2, 3,   activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
-    final = layers.Conv2D(1, 1,   activation = 'sigmoid')(x)  
-    
-    seg_model = Model(inputs=[S_input, S_mask, Q_input], outputs = final)
+    final = layers.Conv2D(1, 1,   activation = 'sigmoid')(x) 
+    print("AAA") 
+    print(final.shape)
+    seg_model = Model(inputs=[S_input, I_mask, Q_input], outputs = final)
     ## Load Guassian weights and make it unlearnable
     Sigma1_layer.set_weights([Sigma1_kernel])
     Sigma2_layer.set_weights([Sigma2_kernel])

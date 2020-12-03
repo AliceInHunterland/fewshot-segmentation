@@ -10,7 +10,7 @@ def get_parser():
     parser.add_argument('-img_p', '--data_path',
                         type=str,
                         help='path to image sources',
-                        default = './fewshot_data/')
+                        default = '/content/drive/MyDrive/fewshot_data/fewshot_data/')
 
     parser.add_argument('-nw', '--nway',
                         type=int,
