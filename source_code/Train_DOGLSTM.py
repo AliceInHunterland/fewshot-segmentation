@@ -10,6 +10,8 @@ import utilz as U
 import numpy as np
 from parser_utils import get_parser
 import pickle
+import tensorflow.keras.backend as K
+K.set_floatx('float16')
 
 ## Get options
 options = get_parser().parse_args()
