@@ -2,33 +2,34 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import tensorflow.keras
-import tensorflow.keras.backend as K
-K.set_floatx('float16')
-import tensorflow.keras.layers as layers 
-from tensorflow.keras.models import Model
+import keras
+import keras.layers as layers 
+from keras.models import Model
+import keras.backend as K
 
 import numpy as np
 import warnings
 
-from tensorflow.keras.layers import Input
-from tensorflow.keras import layers
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Activation
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import MaxPooling2D
-from tensorflow.keras.layers import GlobalMaxPooling2D
-from tensorflow.keras.layers import ZeroPadding2D
-from tensorflow.keras.layers import AveragePooling2D
-from tensorflow.keras.layers import GlobalAveragePooling2D
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.models import Model
-from tensorflow.keras.preprocessing import image
+from keras.layers import Input
+from keras import layers
+from keras.layers import Dense
+from keras.layers import Activation
+from keras.layers import Flatten
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import GlobalMaxPooling2D
+from keras.layers import ZeroPadding2D
+from keras.layers import AveragePooling2D
+from keras.layers import GlobalAveragePooling2D
+from keras.layers import BatchNormalization
+from keras.models import Model
+from keras.preprocessing import image
+from keras.utils import layer_utils
 from keras.utils.data_utils import get_file
 from keras_applications.imagenet_utils import decode_predictions
 from keras_applications.imagenet_utils import preprocess_input
 from keras_applications.imagenet_utils import _obtain_input_shape
+from keras.engine.topology import get_source_inputs
 
 ############################################ Encoder Weights on Image Net ###########################################
 VGG_WEIGHTS_PATH_NO_TOP = ('https://github.com/fchollet/deep-learning-models/'
@@ -213,11 +214,11 @@ def rn_encoder(input_size = (224, 224, 3),
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='b')
   
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='c')
-    """
+    
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='d')
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='e')
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='f')
-
+    """
     x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a')
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b')
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
@@ -255,6 +256,12 @@ def rn_encoder(input_size = (224, 224, 3),
                                     cache_subdir='models',
                                     md5_hash='a268eb855778b3df3c7506639542a6af')
         model.load_weights(weights_path, by_name=True)
+        print("BBBBBBBBBBBBBBBB")
+        print(len(model.layers))
+        print(model.layers)
+        for l in model.layers[:-20]:
+            l.trainable = False
+        print("AAAAAAAAAAAAAAAA")
         if K.backend() == 'theano':
             layer_utils.convert_all_kernels_in_model(model)
 
@@ -620,7 +627,12 @@ def vgg_encoder_b345(input_size = (256, 256, 3)):
                    cache_subdir='models',
                    file_hash='6d6bbae143d832006294945121d1f1fc')
     model.load_weights(weights_path, by_name=True)
-    
+    print("BBBBBBBBBBBBBBBB")
+    print(len(model.layers))
+    print(model.layers)
+    for l in model.layers[:-1]:
+      l.trainable = False
+    print("AAAAAAAAAAAAAAAA")
     return model    
 
 def vgg_encoder_b35(input_size = (256, 256, 3)):

@@ -47,8 +47,9 @@ def get_episode(opt, setX):
                 
     for idx in range(len(indx_c)):
         for idy in range(opt.kshot): # For support set 
-            s_img = cv2.imread(opt.data_path + setX[indx_c[idx]] + '/' + str(indx_s[idy]) + '.jpg' )
-            s_msk = cv2.imread(opt.data_path + setX[indx_c[idx]] + '/' + str(indx_s[idy]) + '.png' )
+            #print(opt.data_path + setX[indx_c[idx]] + '/' + str(indx_s[idy]) + '.jpg')
+            s_img = cv2.imread("/content/fewshot_data/fewshot_data/" + setX[indx_c[idx]] + '/' + str(indx_s[idy]) + '.jpg' )
+            s_msk = cv2.imread("/content/fewshot_data/fewshot_data/" + setX[indx_c[idx]] + '/' + str(indx_s[idy]) + '.png' )
             s_img = cv2.resize(s_img,(opt.img_h, opt.img_w))
             s_msk = cv2.resize(s_msk,(56,        56))        
             s_msk = s_msk /255.
@@ -56,8 +57,8 @@ def get_episode(opt, setX):
             support[idx, idy] = s_img
             smasks[idx, idy]  = s_msk[:, :, 0:1] 
         for idy in range(1): # For query set consider 1 sample per class
-            q_img = cv2.imread(opt.data_path + setX[indx_c[idx]] + '/' + str(indx_s[idy+opt.kshot]) + '.jpg' )
-            q_msk = cv2.imread(opt.data_path + setX[indx_c[idx]] + '/' + str(indx_s[idy+opt.kshot]) + '.png' )
+            q_img = cv2.imread("/content/fewshot_data/fewshot_data/"  + setX[indx_c[idx]] + '/' + str(indx_s[idy+opt.kshot]) + '.jpg' )
+            q_msk = cv2.imread("/content/fewshot_data/fewshot_data/"  + setX[indx_c[idx]] + '/' + str(indx_s[idy+opt.kshot]) + '.png' )
             q_img = cv2.resize(q_img,(opt.img_h, opt.img_w))
             q_msk = cv2.resize(q_msk,(opt.img_h, opt.img_w))        
             q_msk = q_msk /255.

@@ -2,13 +2,10 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import tensorflow.keras
-import tensorflow.keras.backend as K
-K.set_floatx('float16')
-import tensorflow.keras.layers as layers 
-from tensorflow.keras.models import *
-from tensorflow.keras.layers import *
-import tensorflow.keras.backend  as backend
+import keras
+import keras.layers as layers 
+from keras.models import Model
+from keras.layers.core import Lambda
 import encoder_models as EM
 import cv2
 import numpy as np
@@ -16,12 +13,15 @@ import numpy as np
 
 def RN_GlobalAveragePooling2D_r(f):
     def func(x):
+        #print("GAP")
+        #print(x.shape)
+        #print(f.shape)
         x    =  layers.multiply([x, f])
         repx =  int(x.shape[2])
         repy =  int(x.shape[3])
-        x    = (backend.sum(x, axis=[2, 3], keepdims=True) / (backend.sum(f, axis=[2, 3], keepdims=True)))
-        x    =  backend.repeat_elements(x, repx, axis = 2)
-        x    =  backend.repeat_elements(x, repy, axis = 3)    
+        x    = (keras.backend.sum(x, axis=[2, 3], keepdims=True) / (keras.backend.sum(f, axis=[2, 3], keepdims=True)))
+        x    =  keras.backend.repeat_elements(x, repx, axis = 2)
+        x    =  keras.backend.repeat_elements(x, repy, axis = 3)    
         return x
     return Lambda(func) 
 
@@ -30,22 +30,22 @@ def GlobalAveragePooling2D_r(f):
         repc =  int(x.shape[4])
         #print("f.shape")
         #print(f.shape)
-        m    =  backend.repeat_elements(f, repc, axis = 4)
+        m    =  keras.backend.repeat_elements(f, repc, axis = 4)
         #print("GAP")
         #print(x.shape)
         #print(m.shape)
         x    =  layers.multiply([x, m])
         repx =  int(x.shape[2])
         repy =  int(x.shape[3])
-        x    = (backend.sum(x, axis=[2, 3], keepdims=True) / (backend.sum(m, axis=[2, 3], keepdims=True)))
-        x    =  backend.repeat_elements(x, repx, axis = 2)
-        x    =  backend.repeat_elements(x, repy, axis = 3)    
+        x    = (keras.backend.sum(x, axis=[2, 3], keepdims=True) / (keras.backend.sum(m, axis=[2, 3], keepdims=True)))
+        x    =  keras.backend.repeat_elements(x, repx, axis = 2)
+        x    =  keras.backend.repeat_elements(x, repy, axis = 3)    
         return x
     return Lambda(func)
 
 def Rep_mask(f):
     def func(x):
-        x    =  backend.repeat_elements(x, f, axis = 1)   
+        x    =  keras.backend.repeat_elements(x, f, axis = 1)   
         return x
     return Lambda(func)
         
@@ -119,7 +119,7 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     ## K shot
 
 
-    kshot_encoder = Sequential()
+    kshot_encoder = keras.models.Sequential()
     kshot_encoder.add(layers.TimeDistributed(encoder, input_shape=(k_shot, input_size[0], input_size[1], input_size[2])))
 
     ## Encode support and query sample
@@ -202,12 +202,20 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     ## Decode to query segment
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(Bi_rep)
     x = layers.BatchNormalization(axis=3)(x) 
-    x = layers.Activation('relu')(x)       
-    x = layers.UpSampling2D(size=(2*2, 2*2))(x)
+    x = layers.Activation('relu')(x)      
+    if encoder_t == 'RN':
+      x = layers.UpSampling2D(size=(2*2, 2*2))(x)
+    else:
+      x = layers.UpSampling2D(size=(2, 2))(x) 
+
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.BatchNormalization(axis=3)(x) 
-    x = layers.Activation('relu')(x)    
-    x = layers.UpSampling2D(size=(2*4, 2*4))(x)
+    x = layers.Activation('relu')(x) 
+    if encoder_t == 'RN': 
+      x = layers.UpSampling2D(size=(2*4, 2*4))(x)
+    else:
+      x = layers.UpSampling2D(size=(2, 2))(x)
+
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.BatchNormalization(axis=3)(x) 
     x = layers.Activation('relu')(x)       

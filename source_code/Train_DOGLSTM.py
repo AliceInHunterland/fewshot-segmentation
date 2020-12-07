@@ -4,22 +4,23 @@ from __future__ import division
 from __future__ import print_function
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+import tensorflow as tf; print(tf.__version__)
+from keras import backend as K
+print(K.tensorflow_backend._get_available_gpus())
 import model as  M
 import matplotlib.pyplot as plt
 import utilz as U
 import numpy as np
 from parser_utils import get_parser
 import pickle
-import tensorflow.keras.backend as K
-K.set_floatx('float16')
 
 ## Get options
 options = get_parser().parse_args()
 t_l_path   = './fss_test_set.txt'
 Best_performance = 0
 Valid_miou = []
-encoder = 'RN' # 'VGG_b345' #
-weights = '/content/drive/MyDrive/' + encoder + 'fewshot_DOGLSTM.h5'
+encoder =  'VGG_b345' #'RN' # 'VGG_b345' #'RN' #
+weights = '/content/drive/MyDrive/' + encoder  + "_"+ str(34) +"_" +'fewshot_DOGLSTM.h5'
 # Build the model
 model = M.my_model(encoder = encoder, input_size = (options.img_h, options.img_w, 3), k_shot = options.kshot, learning_rate = options.learning_rate)
 model.summary()
@@ -57,12 +58,9 @@ def evaluate(opt, ep):
         # Compute MIOU for episode
         ep_miou       = U.compute_miou(Es_mask, qmask)
         overall_miou += ep_miou
-    print('Epoch:', ep+1 ,'Validation miou >> ', (overall_miou / opt.it_eval))    
-    # save model weights
-    Valid_miou.append((overall_miou / opt.it_eval))
-    if Best_performance<(overall_miou / opt.it_eval):
-       Best_performance = (overall_miou / opt.it_eval)
-       model.save_weights(weights)
+    print('Epoch:', ep+1 ,'Validation miou >> ', (overall_miou / opt.it_eval))  
+    weights = '/content/drive/MyDrive/' + encoder  + "_"+ str(ep+1) +"_" +'fewshot_DOGLSTM.h5'
+    model.save_weights(weights)
 
 def test(opt):
     model.load_weights(weights)
