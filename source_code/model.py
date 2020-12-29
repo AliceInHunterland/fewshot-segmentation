@@ -92,25 +92,7 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
        print('Encoder is not defined yet')
 
 
-
-    I_mask   = layers.Input((k_shot, int(input_size[0]/4), int(input_size[1]/4), 1))
-    O_mask = ''
-    print(I_mask.shape)
-    if encoder_t == 'RN':
-      #print(S_mask.shape)
-      #ksm_encoder = keras.models.Sequential()
-      #sm_enc = 
-      #sm_enc = layers.Conv2D(128, (7, 7), strides=(2, 2), name='conv_sm')
-      enc = layers.Conv2D(128, (8, 8), strides=(7, 7))
-      ksm_encoder_layer = layers.TimeDistributed(enc, input_shape=(k_shot, int(input_size[0]/4), int(input_size[1]/4), 1))
-      O_mask = ksm_encoder_layer(I_mask)
-      print("134")
-      print(O_mask.shape)
-    else:
-      O_mask = I_mask
-
-    model_S = Model(inputs=[I_mask], outputs=O_mask)
-    S_mask = O_mask
+    S_mask = layers.Input((k_shot, int(input_size[0]/4), int(input_size[1]/4), 1))
     S_input  = layers.Input((k_shot, input_size[0], input_size[1], input_size[2]))
     #print(S_input.shape)
     Q_input  = layers.Input(input_size)
@@ -125,9 +107,17 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     ## Encode support and query sample
     s_encoded = kshot_encoder(S_input)
     q_encoded = encoder(Q_input)
+    print("before")
+    print(s_encoded.shape)
+    print(q_encoded.shape)
+    
+    #if encoder_t == "RN":
     s_encoded = layers.TimeDistributed(layers.Conv2D(128, (3, 3), activation='relu', padding='same'))(s_encoded)
     q_encoded = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(q_encoded) 
-
+    
+    print("after")
+    print(s_encoded.shape)
+    print(q_encoded.shape)
     ## Difference of Gussian Pyramid parameters
     kernet_shapes = [3, 5, 7, 9]
     k_value = np.power(2, 1/3)
@@ -187,7 +177,7 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     s_1  = common_representation(s_1, q_encoded)
     s_2  = common_representation(s_2, q_encoded)
     s_3  = common_representation(s_3, q_encoded)
-    s_4  = common_representation(s_4, q_encoded)        
+    s_4  = common_representation(s_4, q_encoded)      
         
     ## Bidirectional Convolutional LSTM on Pyramid      
     s_3D   = layers.concatenate([s_1, s_2, s_3, s_4], axis=1) 
@@ -203,18 +193,12 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(Bi_rep)
     x = layers.BatchNormalization(axis=3)(x) 
     x = layers.Activation('relu')(x)      
-    if encoder_t == 'RN':
-      x = layers.UpSampling2D(size=(2*2, 2*2))(x)
-    else:
-      x = layers.UpSampling2D(size=(2, 2))(x) 
+    x = layers.UpSampling2D(size=(2, 2))(x) 
 
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.BatchNormalization(axis=3)(x) 
     x = layers.Activation('relu')(x) 
-    if encoder_t == 'RN': 
-      x = layers.UpSampling2D(size=(2*4, 2*4))(x)
-    else:
-      x = layers.UpSampling2D(size=(2, 2))(x)
+    x = layers.UpSampling2D(size=(2, 2))(x)
 
     x = layers.Conv2D(128, 3, padding = 'same', kernel_initializer = 'he_normal')(x)
     x = layers.BatchNormalization(axis=3)(x) 
@@ -224,7 +208,7 @@ def my_model(encoder = 'VGG', input_size = (256, 256, 1), k_shot = 1, learning_r
     final = layers.Conv2D(1, 1,   activation = 'sigmoid')(x) 
     print("AAA") 
     print(final.shape)
-    seg_model = Model(inputs=[S_input, I_mask, Q_input], outputs = final)
+    seg_model = Model(inputs=[S_input, S_mask, Q_input], outputs = final)
     ## Load Guassian weights and make it unlearnable
     Sigma1_layer.set_weights([Sigma1_kernel])
     Sigma2_layer.set_weights([Sigma2_kernel])

@@ -259,7 +259,7 @@ def rn_encoder(input_size = (224, 224, 3),
         print("BBBBBBBBBBBBBBBB")
         print(len(model.layers))
         print(model.layers)
-        for l in model.layers[:-20]:
+        for l in model.layers[:-1]:
             l.trainable = False
         print("AAAAAAAAAAAAAAAA")
         if K.backend() == 'theano':

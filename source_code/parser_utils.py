@@ -10,7 +10,7 @@ def get_parser():
     parser.add_argument('-img_p', '--data_path',
                         type=str,
                         help='path to image sources',
-                        default = '/content/drive/MyDrive/fewshot_data/fewshot_data/')
+                        default = '/content/fewshot_data/fewshot_data/')
 
     parser.add_argument('-nw', '--nway',
                         type=int,
@@ -25,7 +25,7 @@ def get_parser():
     parser.add_argument('-csample', '--class_samples',
                         type=int,
                         help='number of sample inside each class, default=10',
-                        default=10)
+                        default=6)
                                                 
     parser.add_argument('-ih', '--img_h',
                         type=int,

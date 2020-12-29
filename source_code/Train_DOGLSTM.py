@@ -13,14 +13,15 @@ import utilz as U
 import numpy as np
 from parser_utils import get_parser
 import pickle
+import cv2
 
 ## Get options
 options = get_parser().parse_args()
 t_l_path   = './fss_test_set.txt'
 Best_performance = 0
 Valid_miou = []
-encoder =  'VGG_b345' #'RN' # 'VGG_b345' #'RN' #
-weights = '/content/drive/MyDrive/' + encoder  + "_"+ str(34) +"_" +'fewshot_DOGLSTM.h5'
+encoder = 'VGG_b345' #'RN' # 'VGG_b345' #'RN' # 'VGG_b345' #'RN' #
+weights = '/content/drive/MyDrive/' + encoder  + "_"+ str(5) +"_" +'fewshot_DOGLSTM.h5'
 # Build the model
 model = M.my_model(encoder = encoder, input_size = (options.img_h, options.img_w, 3), k_shot = options.kshot, learning_rate = options.learning_rate)
 model.summary()
@@ -60,7 +61,11 @@ def evaluate(opt, ep):
         overall_miou += ep_miou
     print('Epoch:', ep+1 ,'Validation miou >> ', (overall_miou / opt.it_eval))  
     weights = '/content/drive/MyDrive/' + encoder  + "_"+ str(ep+1) +"_" +'fewshot_DOGLSTM.h5'
-    model.save_weights(weights)
+    try:
+      model.save_weights(weights)
+    except:
+      print("skipped saving: " + weights)
+      pass
 
 def test(opt):
     model.load_weights(weights)
@@ -73,15 +78,32 @@ def test(opt):
         # Compute MIOU for episode
         ep_miou       = U.compute_miou(Es_mask, qmask)
         overall_miou += ep_miou
+        print(Es_mask.shape)
+        print("-------------------")
+        print(qmask.shape)
         print('episode>>',(idx+1) ,'miou>>', ep_miou)
-    print('Test miou >> ', (overall_miou / opt.it_test))    
+        Es_mask = np.where(Es_mask > 0.6, 1 , 0.)
+        Es_mask = Es_mask * 255
+        O = Es_mask[0]
+        for idx in range(Es_mask.shape[0]):
+          O = O + Es_mask[idx]
+        
+        O = O.astype(np.uint8)
+        O = cv2.cvtColor(O, cv2.COLOR_GRAY2RGBA)
+        r = O.copy()
+        r[:, :, 0] = 0
+        r[:, :, 2] = 0
+        cv2.imwrite("m.png", r)
+        break;
+
+    #print('Test miou >> ', (overall_miou / opt.it_test))    
 
 
 train(options) 
 test(options) 
-Performance = {}
-Performance['Valid_miou'] = Valid_miou
+#Performance = {}
+#Performance['Valid_miou'] = Valid_miou
 
-with open('performance_DOGLSTM.pkl', 'wb') as f:
-        pickle.dump(Performance, f, pickle.HIGHEST_PROTOCOL)
+#with open('performance_DOGLSTM.pkl', 'wb') as f:
+#        pickle.dump(Performance, f, pickle.HIGHEST_PROTOCOL)
 
